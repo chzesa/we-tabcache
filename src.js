@@ -18,7 +18,7 @@ function newCache(config = {}) {
 	const windowValues = config.windowValues || [];
 	var queue;
 
-	if (config.auto && config.queue == null) {
+	if (config.auto) {
 		queue = newSyncQueue({
 			enabled: false
 		});
