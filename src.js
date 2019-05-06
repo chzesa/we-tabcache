@@ -176,7 +176,7 @@ function newCache(config = {}) {
 		let oldWindowId = tab.windowId;
 		let oldIndex = tab.index;
 		let oldWindow = getWindow(oldWindowId);
-		array.splice(oldIndex, 1);
+		oldWindow.splice(oldIndex, 1);
 		
 		if (oldWindow.length == 0) {
 			delete windows[oldWindowId];
