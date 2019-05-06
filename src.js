@@ -299,7 +299,7 @@ function newCache(config = {}) {
 
 		for (var k in iterable) {
 			let tab = iterable[k];
-			if (filter != null && filter(tab) == false) return;
+			if (filter != null && filter(tab) == false) continue;
 			promises.push(callback(tab));
 		}
 
