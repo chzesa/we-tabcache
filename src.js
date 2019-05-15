@@ -15,7 +15,6 @@ function newCache(config = {}) {
 	const onUpdated = config.listeners.onUpdated;
 
 	const tabValueKeys = config.tabValueKeys || [];
-	const windowValues = config.windowValues || [];
 	var queue;
 
 	if (config.auto) {
