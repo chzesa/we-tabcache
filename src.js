@@ -199,7 +199,7 @@ function newCache(config = {}) {
 
 	self.onCreated = async function (tab) {
 		let tabId = tab.id;
-		if (tabs.tabId != null) return;
+		if (tabs[tabId] != null) return;
 
 		let windowId = tab.windowId;
 		let array = getWindow(windowId);
