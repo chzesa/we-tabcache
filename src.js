@@ -31,6 +31,12 @@ function newCache(config = {}) {
 
 	function correctIndexing(windowId, from = 0, to = null) {
 		let array = windows[windowId];
+		if (array.length == 0) {
+			delete activeTab[windowId];
+			delete windows[windowId];
+			return;
+		}
+
 		to = to == null ? array.length : Math.min(to, array.length);
 
 		for (var i = from; i < to; i++) {
@@ -76,11 +82,7 @@ function newCache(config = {}) {
 		delete tabs[tabId];
 		delete tabValues[tabId];
 
-		if (windows[windowId].length == 0) {
-			delete windows[windowId];
-		} else {
-			correctIndexing(windowId, index);
-		}
+		correctIndexing(windowId, index);
 	}
 
 	function getWindow(windowId) {
@@ -176,12 +178,8 @@ function newCache(config = {}) {
 		let oldIndex = tab.index;
 		let oldWindow = getWindow(oldWindowId);
 		oldWindow.splice(oldIndex, 1);
-		
-		if (oldWindow.length == 0) {
-			delete windows[oldWindowId];
-		} else {
-			correctIndexing(oldWindowId, oldIndex);
-		}
+
+		correctIndexing(oldWindowId, oldIndex);
 
 		let newWindow = getWindow(windowId);
 		newWindow.splice(index, 0, tab);
