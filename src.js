@@ -210,6 +210,13 @@ function newCache(config = {}) {
 		info.oldWindowId = oldWindowId;
 		info.oldPosition = oldIndex;
 
+		// Resubmit stored values as they're apparently
+		// lost when tab is moved between windows
+		let values = tabValues[tab.id];
+		for (let k in values) {
+			browser.sessions.setTabValue(tabId, k, values[k]);
+		}
+
 		if (onAttached != null) {
 			await onAttached(tab, info);
 		}
