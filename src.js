@@ -287,6 +287,11 @@ function newCache(config = {}) {
 	self.onUpdated = async function (id, info, tab) {
 		let oldTab = tabs[id];
 		if (oldTab == null) return;
+
+		// onUpdated handler may give information considered
+		// outdated, esp. following onAttached index correction
+		tab.index = oldTab.index;
+		tab.windowId = oldTab.windowId;
 		swapTabObject(oldTab, tab);
 
 		if (onUpdated != null) {
