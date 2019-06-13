@@ -35,7 +35,7 @@ function newCache(config = {}) {
 	const onUpdated = config.listeners.onUpdated;
 
 	const tabValueKeys = config.tabValueKeys || [];
-	var queue;
+	let queue;
 
 	if (config.auto) {
 		queue = newSyncQueue({
@@ -59,7 +59,7 @@ function newCache(config = {}) {
 
 		to = to == null ? array.length : Math.min(to, array.length);
 
-		for (var i = from; i < to; i++) {
+		for (let i = from; i < to; i++) {
 			array[i].index = i;
 		}
 	}
@@ -321,7 +321,7 @@ function newCache(config = {}) {
 			iterable = tabs;
 		}
 
-		for (var k in iterable) {
+		for (let k in iterable) {
 			let tab = iterable[k];
 			if (filter != null && filter(tab) == false) continue;
 			promises.push(callback(tab));
@@ -333,7 +333,7 @@ function newCache(config = {}) {
 	self.forEachWindow = async function (callback) {
 		let promises = [];
 
-		for (var key in windows) {
+		for (let key in windows) {
 			promises.push(callback(Number(key)));
 		}
 
