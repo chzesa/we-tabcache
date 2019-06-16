@@ -346,7 +346,7 @@ function newCache(config = {}) {
 		await Promise.all(promises);
 	}
 
-	self.init = async function () {
+	self.init = async function (initializerCallback = null) {
 		if (initialized !== false) return;
 		initialized = true;
 
@@ -409,8 +409,8 @@ function newCache(config = {}) {
 			deleteTab(id);
 		}
 
-		if (config.init != null) {
-			await config.init(self);
+		if (initializerCallback != null) {
+			await initializerCallback(self);
 		}
 
 		if (config.auto) {
