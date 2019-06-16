@@ -45,9 +45,7 @@ function newCache(config = {}) {
 	}
 	
 	self.debug = function () {
-		let ret = {windows, tabs, activeTab};
-		if (queue != null) ret.queue = queue;
-		return ret;
+		return {windows, tabs, activeTab, tabValues, queue};
 	}
 
 	function correctIndexing(windowId, from = 0, to = null) {
