@@ -36,6 +36,7 @@ function newCache(config = {}) {
 
 	const tabValueKeys = config.tabValueKeys || [];
 	let queue;
+	let initialized = false;
 
 	if (config.auto) {
 		queue = newSyncQueue({
@@ -346,6 +347,9 @@ function newCache(config = {}) {
 	}
 
 	self.init = async function () {
+		if (initialized !== false) return;
+		initialized = true;
+
 		if (config.auto) {
 			browser.tabs.onActivated.addListener(function (info) {
 				queue.do(self.onActivated, info);
