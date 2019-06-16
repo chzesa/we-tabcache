@@ -38,10 +38,12 @@ function newCache(config = {}) {
 	let queue;
 	let initialized = false;
 
-	if (config.auto) {
+	if (config.auto === true) {
 		queue = newSyncQueue({
 			enabled: false
 		});
+	} else {
+		queue = config.queue;
 	}
 	
 	self.debug = function () {
