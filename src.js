@@ -19,6 +19,40 @@
 // THE SOFTWARE.
 
 function newCache(config = {}) {
+	function Event() {
+		const self = {};
+		const listeners = [];
+
+		self.addListener = function(listener) {
+			listeners.push(listener);
+		}
+
+		self.removeListener = function(listener) {
+			for (let i = listeners.length - 1; i > -1; i--) {
+				if (listeners[i] == listener) listeners.splice(i, 1);
+			}
+		}
+
+		self.hasListener = function(listener) {
+			let result = false;
+			listeners.forEach(l => { if (l == listener) result = true; });
+			return result;
+		}
+
+		self.notify = async function(...params) {
+			let cloned = listeners.slice(0);
+			for (let i in cloned) {
+				try {
+					await cloned[i](...params);
+				} catch(e) {
+					console.log(e);
+				}
+			}
+		}
+
+		return self;
+	}
+
 	config.listeners = config.listeners === undefined ? {} : config.listeners;
 
 	const self = {};
@@ -27,12 +61,25 @@ function newCache(config = {}) {
 	const activeTab = {};
 	const tabValues = {};
 
-	const onActivated = config.listeners.onActivated;
-	const onAttached = config.listeners.onAttached;
-	const onCreated = config.listeners.onCreated;
-	const onMoved = config.listeners.onMoved;
-	const onRemoved = config.listeners.onRemoved;
-	const onUpdated = config.listeners.onUpdated;
+	self.onActivated = Event();
+	self.onAttached = Event();
+	self.onCreated = Event();
+	self.onMoved = Event();
+	self.onRemoved = Event();
+	self.onUpdated = Event();
+
+	if (config.listeners.onActivated != undefined)
+		self.onActivated.addListener(config.listeners.onActivated);
+	if (config.listeners.onAttached != undefined)
+		self.onAttached.addListener(config.listeners.onAttached);
+	if (config.listeners.onCreated != undefined)
+		self.onCreated.addListener(config.listeners.onCreated);
+	if (config.listeners.onMoved != undefined)
+		self.onMoved.addListener(config.listeners.onMoved);
+	if (config.listeners.onRemoved != undefined)
+		self.onRemoved.addListener(config.listeners.onRemoved);
+	if (config.listeners.onUpdated != undefined)
+		self.onUpdated.addListener(config.listeners.onUpdated);
 
 	const tabValueKeys = config.tabValueKeys || [];
 	let queue;
@@ -171,7 +218,7 @@ function newCache(config = {}) {
 		return true;
 	}
 
-	self.onActivated = async function (info) {
+	self.cacheOnActivated = async function (info) {
 		let tabId = info.tabId;
 		let tab = tabs[tabId];
 		if (tab == null) return;
@@ -184,12 +231,10 @@ function newCache(config = {}) {
 		activeTab[windowId] = tabId;
 		tab.active = true;
 
-		if (onActivated != null) {
-			await onActivated(tab, info);
-		}
+		await self.onActivated.notify(tab, info);
 	}
 
-	self.onAttached = async function (tabId, info) {
+	self.cacheOnAttached = async function (tabId, info) {
 		let tab = tabs[tabId];
 		if (tab == null) return;
 
@@ -218,12 +263,10 @@ function newCache(config = {}) {
 			browser.sessions.setTabValue(tabId, k, values[k]);
 		}
 
-		if (onAttached != null) {
-			await onAttached(tab, info);
-		}
+		await self.onAttached.notify(tab, info);
 	}
 
-	self.onCreated = async function (tab) {
+	self.cacheOnCreated = async function (tab) {
 		let tabId = tab.id;
 		if (tabs[tabId] != null) return;
 
@@ -248,12 +291,10 @@ function newCache(config = {}) {
 			return;
 		}
 
-		if (onCreated != null) {
-			await onCreated(tab);
-		}
+		await self.onCreated.notify(tab);
 	}
 
-	self.onMoved = async function (tabId, info) {
+	self.cacheOnMoved = async function (tabId, info) {
 		let tab = tabs[tabId];
 		if (tab == null) return;
 
@@ -269,23 +310,19 @@ function newCache(config = {}) {
 		correctIndexing(windowId, Math.min(fromIndex, toIndex)
 			, Math.max(fromIndex, toIndex) + 1);
 
-		if (onMoved != null) {
-			await onMoved(tab, info);
-		}
+		await self.onMoved.notify(tab, info);
 	}
 
-	self.onRemoved = async function (tabId, info) {
+	self.cacheOnRemoved = async function (tabId, info) {
 		let tab = tabs[tabId];
 		if (tab == null) return;
 		let values = tabValues[tabId];
 		deleteTab(tabId);
 
-		if (onRemoved != null) {
-			await onRemoved(tab, info, values);
-		}
+		await self.onRemoved.notify(tab, info, values);
 	}
 
-	self.onUpdated = async function (id, info, tab) {
+	self.cacheOnUpdated = async function (id, info, tab) {
 		let oldTab = tabs[id];
 		if (oldTab == null) return;
 
@@ -295,9 +332,7 @@ function newCache(config = {}) {
 		tab.windowId = oldTab.windowId;
 		swapTabObject(oldTab, tab);
 
-		if (onUpdated != null) {
-			await onUpdated(tab, info);
-		}
+		await self.onUpdated.notify(tab, info);
 	}
 
 	self.get = function (tabId) {
@@ -352,27 +387,27 @@ function newCache(config = {}) {
 
 		if (config.auto) {
 			browser.tabs.onActivated.addListener(function (info) {
-				queue.do(self.onActivated, info);
+				queue.do(self.cacheOnActivated, info);
 			});
 
 			browser.tabs.onAttached.addListener(function (id, info) {
-				queue.do(self.onAttached, id, info);
+				queue.do(self.cacheOnAttached, id, info);
 			});
 
 			browser.tabs.onCreated.addListener(function (tab) {
-				queue.do(self.onCreated, tab);
+				queue.do(self.cacheOnCreated, tab);
 			});
 
 			browser.tabs.onMoved.addListener(function (id, info) {
-				queue.do(self.onMoved, id, info);
+				queue.do(self.cacheOnMoved, id, info);
 			});
 
 			browser.tabs.onRemoved.addListener(function (id, info) {
-				queue.do(self.onRemoved, id, info);
+				queue.do(self.cacheOnRemoved, id, info);
 			});
 
 			browser.tabs.onUpdated.addListener(function (id, info, tab) {
-				queue.do(self.onUpdated, id, info, tab);
+				queue.do(self.cacheOnUpdated, id, info, tab);
 			});
 		}
 
