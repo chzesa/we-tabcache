@@ -31,7 +31,7 @@ let myConfig = {
 };
 ```
 
-The `listeners` object may contain any combination of the following values: `onActivated`, `onAttached`, `onCreated`, `onMoved`, `onRemoved`, and `onUpdated`, corresponding to `browser.tabs` events. The values are the *cache event handlers* (see Cache Event Handlers).
+The `listeners` object may contain any combination of the following values: `onActivated`, `onAttached`, `onCreated`, `onMoved`, `onRemoved`, and `onUpdated`, corresponding to `browser.tabs` events. The values are registered as *cache event handlers* (see Cache Event Handlers).
 
 `auto` is a boolean which can be used to avoid manually adding the required browser event listeners. If `true`, it will also create the required `queue` object  (see Queue). This may be set as `false` if some browser events are not desired to be listened to, but hooking the cache listeners must be done manually.
 
@@ -39,12 +39,19 @@ The `listeners` object may contain any combination of the following values: `onA
 
 `tabValueKeys` is an array of keys (strings) used for the `sessions` api tabValue functions. Values for keys defined in the array are fetched and stored by the cache. This prefetching occurs when initializing the cache itself and in the cache onCreated handler. The fetched values are guaranteed to be available in the cache for `myInitFunction` and `onCreated` cache event handler functions.
 
+### Cache Events
+The cache object has `onActivated`, `onAttached`, `onCreated`, `onMoved`, `onRemoved`, and `onUpdated` keys which provide a similar interface as the corresponding `browser.tabs` events. Each key supports the following:
+
+* `addListener(myListenerFunction)`: the function passed as a parameter will be invoked by the cache as described in the *Cache Event Handlers* section.
+* `removeListener(myListenerFunction)`: removes the specified function from the list of functions invoked when the event is fired.
+* `hasListener(myListenerFunction)`: returns `true` if the parameter is currently registered as a listener of the event, `false` otherwise.
+
 ### Cache Event Handlers
-The *cache event handlers* are the functions passed to the cache in the `listeners` object. They will be invoked after the cache state has been updated following a browser event. They may be asynchronous and will be awaited on before the cache continues processing events.
+The *cache event handlers* are the functions passed to the cache in the `listeners` object, and any function that was added as a listener for one of the cache events. They will be invoked after the cache state has been updated following a browser event. They may be asynchronous and will be awaited on before the cache continues processing further browser events.
 
 * `onActivated` will be invoked with arguments `tabs.Tab`, [`activeInfo`](https://developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions/API/tabs/onActivated#activeInfo).
-* `onAttached` will be invoked with arguments `tabs.Tab`, [`attachInfo`](https://developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions/API/tabs/onAttached#attachInfo). **There will not be a corresponding `onDetached` event**. Instead, the `attachInfo` contains the values of the [`detachInfo`](https://developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions/API/tabs/onDetached#detachInfo) and the cache will immediately reflect the browser state after the `onDetached` event. In addition, the cache will re-submit any cached tabValues before invoking the cache event handler.
-* `onCreated` will be invoked with the argument `tabs.Tab`. Any values (if defined) for keys in `tabValueKeys` will be available in the cache before the cache event handler is invoked. If prefetching one of the values fails the cache will not invoke any events related to the tab, as the tab will have been closed.
+* `onAttached` will be invoked with arguments `tabs.Tab`, [`attachInfo`](https://developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions/API/tabs/onAttached#attachInfo). **There will not be a corresponding `onDetached` event**. Instead, the `attachInfo` contains the values of the [`detachInfo`](https://developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions/API/tabs/onDetached#detachInfo) and the cache will immediately reflect the browser state after the `onDetached` event. In addition, the cache will re-submit any cached tabValues before invoking the cache event handlers.
+* `onCreated` will be invoked with the argument `tabs.Tab`. Any values (if defined) for keys in `tabValueKeys` will be available in the cache before the cache event handlers are invoked. If prefetching one of the values fails the cache will not invoke any events related to the tab, as the tab will have been closed.
 * `onMoved` will be invoked with the arguments `tabs.Tab`, [`moveInfo`](https://developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions/API/tabs/onMoved#moveInfo).
 * `onRemoved` will be invoked with arguments `tabs.Tab`, [`removeInfo`](https://developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions/API/tabs/onRemoved#removeInfo), `values`. `values` is an object consisting of the key-value pairs which were present in the cache when the tab was removed. **The values may not correspond to the actual values stored by the browser**, for example, when the cache values were updated after a tab was removed.
 * `onUpdated` will be invoked with arguments `tabs.Tab`, [`updateProperties`](https://developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions/API/tabs/update).
@@ -69,8 +76,8 @@ The *cache event handlers* are the functions passed to the cache in the `listene
 * `cache.debug()` returns an object containing the internal variables in the cache.
 
 ## Known intentional behaviour differences to Firefox
-* `onUpdated` cache event handler will not be invoked before the `onCreated` event for a given tab.
-* the `index` and `windowId` of `tabs.Tab` passed to `onUpdated` cache event handler may differ from the values given to the `tabs.onUpdated` event callback, particularly when tabs are moved from one window to another.
+* The cache event handlers for `tabs.onUpdated` will not be invoked before the `tabs.onCreated` event for a given tab.
+* The `index` and `windowId` of `tabs.Tab` passed to `onUpdated` cache event handler may differ from the values given to the `tabs.onUpdated` event callback, particularly when tabs are moved from one window to another.
 
 ## Queue
 Internally the script maintains a [`js-syncqueue`](https://github.com/chzesa/js-syncqueue) object to queue pending browser events while its internal state is updating and the cache event handlers are being awaited on. This also guarantees all browser events are handled, even the ones occurring during cache initialization.
@@ -80,14 +87,14 @@ Internally the script maintains a [`js-syncqueue`](https://github.com/chzesa/js-
 Accessing the queue when using `auto: true` can be done via `let cacheQueue = cache.debug().queue` as soon as the cache has been created (not necessarily initialized).
 
 ## `auto: false`
-For the cache to function correctly, at least the `cache.onCreated`, `cache.onRemoved`, `cache.onMoved`, and `cache.onAttached` listeners must be hooked to the corresponding browser events.
+For the cache to function correctly, at least the `cache.cacheOnCreated`, `cache.cacheOnRemoved`, `cache.ocacheOnMoved`, and `cache.cacheOnAttached` listeners must be hooked to the corresponding browser events.
 
 ```Js
 let myQueue = newSyncQueue({ enabled: false });
 let cache = newCache({ myQueue });
 
 browser.tabs.onCreated.addEventListener(info => {
-	myQueue.do(cache.onCreated, info);
+	myQueue.do(cache.cacheOnCreated, info);
 });
 
 /* other listeners */
