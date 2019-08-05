@@ -132,7 +132,7 @@ function newCache(config = {}) {
 	}
 
 	self.removeValue = function(tabId, key) {
-		let values = tabs[tabId];
+		let values = tabValues[tabId];
 		if (values != null) {
 			delete values[key];
 		}
