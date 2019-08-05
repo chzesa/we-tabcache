@@ -128,7 +128,7 @@ function newCache(config = {}) {
 			return values[key];
 		}
 
-		return null;
+		return undefined;
 	}
 
 	self.removeValue = function(tabId, key) {
