@@ -16,22 +16,27 @@ Creating the cache: `let cache = newCache(myConfig);`
 Initializing the cache: `await cache.init(myInitFunction);`
 
 ```Js
-function myOnCreatedHandler(tab) { /*  */ }
+async function myOnCreatedHandler(tab) { /*  */ }
 
-// Example configuration
-let myListeners = {
-	onCreated: myOnCreatedHandler
-};
+async function myInitFunction(cache) { /* initialize addon state by querying the cache */ }
 
-let myConfig = {
-	listeners: myListeners,
-	auto: true,
-	queue: null,
-	tabValueKeys: ['foo', 'bar'],
-};
+async function init() {
+	let myListeners = { onCreated: myOnCreatedHandler };
+
+	let myConfig = {
+		listeners: myListeners,
+		auto: true,
+		tabValueKeys: ['foo', 'bar'],
+	};
+
+	let cache = newCache(myConfig);
+	await cache.init(myInitFunction);
+}
+
+init();
 ```
 
-The `listeners` object may contain any combination of the following values: `onActivated`, `onAttached`, `onCreated`, `onMoved`, `onRemoved`, and `onUpdated`, corresponding to `browser.tabs` events. The values are registered as *cache event handlers* (see Cache Event Handlers).
+The `listeners` object may contain function callbacks for any combination of the following keys: `onActivated`, `onAttached`, `onCreated`, `onMoved`, `onRemoved`, and `onUpdated`, corresponding to `browser.tabs` events. The values are registered as *cache event handlers* (see Cache Event Handlers). Instead of passing the callbacks in this object the listeners could be added later, e.g. in `myInitFunction`.
 
 `auto` is a boolean which can be used to avoid manually adding the required browser event listeners. If `true`, it will also create the required `queue` object  (see Queue). This may be set as `false` if some browser events are not desired to be listened to, but hooking the cache listeners must be done manually.
 
@@ -75,9 +80,9 @@ The *cache event handlers* are the functions passed to the cache in the `listene
 * `cache.init(myInitFunction)` (asynchronous) causes the cache to initialize, querying for the current tab data from the browser, updating its internal state, invoking `myInitFunction` function with the cache itself as the parameter, and finally beginning to process browser events. `myInitFunction` is optional, may be asynchronous, and will be awaited on.
 * `cache.debug()` returns an object containing the internal variables in the cache.
 
-## Known intentional behaviour differences to Firefox
+## Behaviour differences to Firefox
 * The cache event handlers for `tabs.onUpdated` will not be invoked before the `tabs.onCreated` event for a given tab.
-* The `index` and `windowId` of `tabs.Tab` passed to `onUpdated` cache event handler may differ from the values given to the `tabs.onUpdated` event callback, particularly when tabs are moved from one window to another.
+* The `index` and `windowId` of `tabs.Tab` passed to `onUpdated` cache event handler may differ from the values passed by the browser to the cache's `tabs.onUpdated` event callback, particularly when tabs are moved from one window to another. These values will always be coherent to the cache itself.
 
 ## Queue
 Internally the script maintains a [`js-syncqueue`](https://github.com/chzesa/js-syncqueue) object to queue pending browser events while its internal state is updating and the cache event handlers are being awaited on. This also guarantees all browser events are handled, even the ones occurring during cache initialization.
@@ -91,7 +96,7 @@ For the cache to function correctly, at least the `cache.cacheOnCreated`, `cache
 
 ```Js
 let myQueue = newSyncQueue({ enabled: false });
-let cache = newCache({ myQueue });
+let cache = newCache({ queue: myQueue });
 
 browser.tabs.onCreated.addEventListener(info => {
 	myQueue.do(cache.cacheOnCreated, info);
