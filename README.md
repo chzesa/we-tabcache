@@ -92,19 +92,25 @@ Internally the script maintains a [`js-syncqueue`](https://github.com/chzesa/js-
 Accessing the queue when using `auto: true` can be done via `let cacheQueue = cache.debug().queue` as soon as the cache has been created (not necessarily initialized).
 
 ## `auto: false`
-For the cache to function correctly, at least the `cache.cacheOnCreated`, `cache.cacheOnRemoved`, `cache.ocacheOnMoved`, and `cache.cacheOnAttached` listeners must be hooked to the corresponding browser events.
+Some event listeners must be hooked for the cache to function correctly, as below
 
 ```Js
 let myQueue = newSyncQueue({ enabled: false });
 let cache = newCache({ queue: myQueue });
 
-browser.tabs.onCreated.addEventListener(info => {
-	myQueue.do(cache.cacheOnCreated, info);
-});
+/* mandatory listeners */
+browser.tabs.onActivated.addListener(info => myQueue.do(cache.cacheOnActivated, info));
+browser.tabs.onAttached.addListener((id, info) => myQueue.do(cache.cacheOnAttached, id, info));
+browser.tabs.onCreated.addListener(tab => myQueue.do(cache.cacheOnCreated, tab));
+browser.tabs.onMoved.addListener((id, info) => myQueue.do(cache.cacheOnMoved, id, info));
+browser.tabs.onRemoved.addListener((id, info) => myQueue.do(cache.cacheOnRemoved, id, info));
 
-/* other listeners */
+/* optional listeners */
+browser.tabs.onUpdated.addListener((id, info, tab) => myQueue.do(cache.cacheOnUpdated, id, info, tab));
 
+/* initialize cache and start processing events */
 await cache.init(myInitFunction);
+myQueue.enable()
 ````
 
 ## Examples
