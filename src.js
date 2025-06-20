@@ -82,6 +82,7 @@ function newCache(config = {}) {
 	const tabValueKeys = config.tabValueKeys || [];
 	let queue;
 	let initialized = false;
+	let logging = config.logging || 0
 
 	if (config.auto === true) {
 		queue = newSyncQueue({
@@ -219,6 +220,7 @@ function newCache(config = {}) {
 	self.cacheOnActivated = async function (info) {
 		let tabId = info.tabId;
 		let tab = tabs[tabId];
+		if (logging > 1) console.log('[Q] onActivated', info, tab)
 		if (tab == null) return;
 		let windowId = tab.windowId;
 		let oldTab = tabs[activeTab[windowId]];
@@ -234,6 +236,7 @@ function newCache(config = {}) {
 
 	self.cacheOnAttached = async function (tabId, info) {
 		let tab = tabs[tabId];
+		if (logging > 0) console.log('[Q] onAttached', tabId, info, tab)
 		if (tab == null) return;
 
 		let windowId = info.newWindowId;
@@ -266,6 +269,7 @@ function newCache(config = {}) {
 
 	self.cacheOnCreated = async function (tab) {
 		let tabId = tab.id;
+		if (logging > 0) console.log('[Q] onCreated', tab)
 		if (tabs[tabId] != null) return;
 
 		let windowId = tab.windowId;
@@ -294,6 +298,7 @@ function newCache(config = {}) {
 
 	self.cacheOnMoved = async function (tabId, info) {
 		let tab = tabs[tabId];
+		if (logging > 0) console.log('[Q] onMoved', tabId, info, tab)
 		if (tab == null) return;
 
 		let windowId = tab.windowId;
@@ -313,6 +318,7 @@ function newCache(config = {}) {
 
 	self.cacheOnRemoved = async function (tabId, info) {
 		let tab = tabs[tabId];
+		if (logging > 0) console.log('[Q] onRemoved', tabId, info, tab)
 		if (tab == null) return;
 		let values = tabValues[tabId];
 		deleteTab(tabId);
@@ -322,6 +328,7 @@ function newCache(config = {}) {
 
 	self.cacheOnUpdated = async function (id, info, tab) {
 		let oldTab = tabs[id];
+		if (logging > 1) console.log('[Q] onUpdated', id, info, tab, oldTab)
 		if (oldTab == null) return;
 
 		// onUpdated handler may give information considered
@@ -385,26 +392,32 @@ function newCache(config = {}) {
 
 		if (config.auto) {
 			browser.tabs.onActivated.addListener(function (info) {
+				if (logging > 1) console.log('[B] onActivated', info)
 				queue.do(self.cacheOnActivated, info);
 			});
 
 			browser.tabs.onAttached.addListener(function (id, info) {
+				if (logging > 0) console.log('[B] onAttached', id, info)
 				queue.do(self.cacheOnAttached, id, info);
 			});
 
 			browser.tabs.onCreated.addListener(function (tab) {
+				if (logging > 0) console.log('[B] onCreated', tab)
 				queue.do(self.cacheOnCreated, tab);
 			});
 
 			browser.tabs.onMoved.addListener(function (id, info) {
+				if (logging > 0) console.log('[B] onMoved', id, info)
 				queue.do(self.cacheOnMoved, id, info);
 			});
 
 			browser.tabs.onRemoved.addListener(function (id, info) {
+				if (logging > 0) console.log('[B] onRemoved', id, info)
 				queue.do(self.cacheOnRemoved, id, info);
 			});
 
 			browser.tabs.onUpdated.addListener(function (id, info, tab) {
+				if (logging > 1) console.log('[B] onUpdated', id, info, tab)
 				queue.do(self.cacheOnUpdated, id, info, tab);
 			});
 		}
