@@ -83,6 +83,9 @@ function newCache(config = {}) {
 	let queue;
 	let initialized = false;
 	let logging = config.logging || 0
+	let restoringClosedTabs = false;
+	let pendingRestoreEvents = []
+	let now = 0;
 
 	if (config.auto === true) {
 		queue = newSyncQueue({
@@ -217,10 +220,30 @@ function newCache(config = {}) {
 		return true;
 	}
 
+	processRestoredtabs = async function() {
+		if (!restoringClosedTabs) {
+			return;
+		}
+
+		if (logging > 0) console.log('[Q] Creating restored tabs')
+
+		restoringClosedTabs = false;
+
+		pendingRestoreEvents.sort((a, b) => a.tab.index - b.tab.index)
+
+		for (let i in pendingRestoreEvents) {
+			data = pendingRestoreEvents[i];
+			await self.cacheOnCreated(data.tab, data.promises, true);
+		}
+
+		pendingRestoreEvents = []
+	}
+
 	self.cacheOnActivated = async function (info) {
 		let tabId = info.tabId;
 		let tab = tabs[tabId];
 		if (logging > 1) console.log('[Q] onActivated', info, tab)
+		await processRestoredtabs();
 		if (tab == null) return;
 		let windowId = tab.windowId;
 		let oldTab = tabs[activeTab[windowId]];
@@ -237,6 +260,7 @@ function newCache(config = {}) {
 	self.cacheOnAttached = async function (tabId, info) {
 		let tab = tabs[tabId];
 		if (logging > 0) console.log('[Q] onAttached', tabId, info, tab)
+		await processRestoredtabs();
 		if (tab == null) return;
 
 		let windowId = info.newWindowId;
@@ -267,9 +291,51 @@ function newCache(config = {}) {
 		await self.onAttached.__notify(tab, info);
 	}
 
-	self.cacheOnCreated = async function (tab) {
-		let tabId = tab.id;
+	isTabRestored = async function(tab, promises) {
+		if (tab.lastAccessed !== undefined & tab.lastAccessed < now) {
+			return true;
+		}
+
+		let values = null;
+
+		try {
+			values = await promises;
+		} catch (e)  {
+			return false;
+		}
+
+		for (let i in values) {
+			try {
+				if (await values[i] !== undefined) {
+					return true;
+				}
+			} catch(e) {
+				return false;
+			}
+		}
+
+		return false;
+	}
+
+	self.cacheOnCreated = async function (tab, promises, delayed = false) {
 		if (logging > 0) console.log('[Q] onCreated', tab)
+		if (!restoringClosedTabs & !delayed & await isTabRestored(tab, promises)) {
+			if (logging > 0) console.log('[Q] Detected tab restore')
+			restoringClosedTabs = true;
+		}
+
+		if (restoringClosedTabs) {
+			if (logging > 0) console.log('[Q] Delaying tab creation')
+			pendingRestoreEvents.push({
+				tab,
+				promises
+			});
+
+			return;
+		}
+
+		let tabId = tab.id;
+		
 		if (tabs[tabId] != null) return;
 
 		let windowId = tab.windowId;
@@ -299,6 +365,7 @@ function newCache(config = {}) {
 	self.cacheOnMoved = async function (tabId, info) {
 		let tab = tabs[tabId];
 		if (logging > 0) console.log('[Q] onMoved', tabId, info, tab)
+		await processRestoredtabs();
 		if (tab == null) return;
 
 		let windowId = tab.windowId;
@@ -319,6 +386,7 @@ function newCache(config = {}) {
 	self.cacheOnRemoved = async function (tabId, info) {
 		let tab = tabs[tabId];
 		if (logging > 0) console.log('[Q] onRemoved', tabId, info, tab)
+		await processRestoredtabs();
 		if (tab == null) return;
 		let values = tabValues[tabId];
 		deleteTab(tabId);
@@ -329,6 +397,7 @@ function newCache(config = {}) {
 	self.cacheOnUpdated = async function (id, info, tab) {
 		let oldTab = tabs[id];
 		if (logging > 1) console.log('[Q] onUpdated', id, info, tab, oldTab)
+		await processRestoredtabs();
 		if (oldTab == null) return;
 
 		// onUpdated handler may give information considered
@@ -403,7 +472,8 @@ function newCache(config = {}) {
 
 			browser.tabs.onCreated.addListener(function (tab) {
 				if (logging > 0) console.log('[B] onCreated', tab)
-				queue.do(self.cacheOnCreated, tab);
+				let promises = tabValueKeys.map(k => browser.sessions.getTabValue(tab.id, k))
+				queue.do(self.cacheOnCreated, tab, promises, false);
 			});
 
 			browser.tabs.onMoved.addListener(function (id, info) {
