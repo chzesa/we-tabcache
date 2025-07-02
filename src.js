@@ -240,10 +240,10 @@ function newCache(config = {}) {
 	}
 
 	self.cacheOnActivated = async function (info) {
+		await processRestoredtabs();
 		let tabId = info.tabId;
 		let tab = tabs[tabId];
 		if (logging > 1) console.log('[Q] onActivated', info, tab)
-		await processRestoredtabs();
 		if (tab == null) return;
 		let windowId = tab.windowId;
 		let oldTab = tabs[activeTab[windowId]];
@@ -258,9 +258,9 @@ function newCache(config = {}) {
 	}
 
 	self.cacheOnAttached = async function (tabId, info) {
+		await processRestoredtabs();
 		let tab = tabs[tabId];
 		if (logging > 0) console.log('[Q] onAttached', tabId, info, tab)
-		await processRestoredtabs();
 		if (tab == null) return;
 
 		let windowId = info.newWindowId;
@@ -363,9 +363,9 @@ function newCache(config = {}) {
 	}
 
 	self.cacheOnMoved = async function (tabId, info) {
+		await processRestoredtabs();
 		let tab = tabs[tabId];
 		if (logging > 0) console.log('[Q] onMoved', tabId, info, tab)
-		await processRestoredtabs();
 		if (tab == null) return;
 
 		let windowId = tab.windowId;
@@ -384,9 +384,9 @@ function newCache(config = {}) {
 	}
 
 	self.cacheOnRemoved = async function (tabId, info) {
+		await processRestoredtabs();
 		let tab = tabs[tabId];
 		if (logging > 0) console.log('[Q] onRemoved', tabId, info, tab)
-		await processRestoredtabs();
 		if (tab == null) return;
 		let values = tabValues[tabId];
 		deleteTab(tabId);
@@ -395,9 +395,9 @@ function newCache(config = {}) {
 	}
 
 	self.cacheOnUpdated = async function (id, info, tab) {
+		await processRestoredtabs();
 		let oldTab = tabs[id];
 		if (logging > 1) console.log('[Q] onUpdated', id, info, tab, oldTab)
-		await processRestoredtabs();
 		if (oldTab == null) return;
 
 		// onUpdated handler may give information considered
